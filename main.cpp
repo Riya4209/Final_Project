@@ -4,16 +4,17 @@
 #include <ctime>
 #include <cstdlib>
 #include <vector>
+#include <cmath>
 
 using namespace std;
 
 const int WINDOW_WIDTH = 800;
 const int WINDOW_HEIGHT = 600;
-const int BASKET_SIZE = 50; // resized basket size
+const int BASKET_SIZE = 100;
 const int GRADE_SIZE = 30;
-const float SPAWN_INTERVAL = 1.0f; // time between grade spawns (seconds)
-const int GAME_DURATION = 60; // game duration (seconds)
-const int WINNING_SCORE = 20; // expected score to win
+const float SPAWN_INTERVAL = 1.0f;
+const int GAME_DURATION = 60;
+const int WINNING_SCORE = 20;
 
 class Grade : public sf::Sprite {
 public:
@@ -24,7 +25,9 @@ public:
         setTexture(texture);
         setPosition(pos);
         setOrigin(texture.getSize().x / 2, texture.getSize().y / 2);
-        setScale(0.2f, 0.2f); // resize grade to fit on screen
+        float scaleX = GRADE_SIZE / static_cast<float>(texture.getSize().x);
+        float scaleY = GRADE_SIZE / static_cast<float>(texture.getSize().y);
+        setScale(scaleX, scaleY);
     }
 
     void moveGrade(const sf::Time &elapsed) {
@@ -42,7 +45,9 @@ public:
         setTexture(texture);
         setPosition(position);
         setOrigin(texture.getSize().x / 2, texture.getSize().y / 2);
-        setScale(0.2f, 0.2f); // resize basket to fit on screen
+        float scaleX = BASKET_SIZE / static_cast<float>(texture.getSize().x);
+        float scaleY = BASKET_SIZE / static_cast<float>(texture.getSize().y);
+        setScale(scaleX, scaleY);
     }
 
     void setSpeed(float x, float y, float r) {
@@ -55,12 +60,11 @@ public:
         move(velocityX * elapsed.asSeconds(), velocityY * elapsed.asSeconds());
         rotate(rotationSpeed * elapsed.asSeconds());
 
-        // Keep basket within window bounds
         sf::Vector2f pos = getPosition();
-        if (pos.x < getTexture()->getSize().x / 2 * 0.2f) pos.x = getTexture()->getSize().x / 2 * 0.2f;
-        if (pos.x > WINDOW_WIDTH - getTexture()->getSize().x / 2 * 0.2f) pos.x = WINDOW_WIDTH - getTexture()->getSize().x / 2 * 0.2f;
-        if (pos.y < getTexture()->getSize().y / 2 * 0.2f) pos.y = getTexture()->getSize().y / 2 * 0.2f;
-        if (pos.y > WINDOW_HEIGHT - getTexture()->getSize().y / 2 * 0.2f) pos.y = WINDOW_HEIGHT - getTexture()->getSize().y / 2 * 0.2f;
+        if (pos.x < getTexture()->getSize().x / 2 * getScale().x) pos.x = getTexture()->getSize().x / 2 * getScale().x;
+        if (pos.x > WINDOW_WIDTH - getTexture()->getSize().x / 2 * getScale().x) pos.x = WINDOW_WIDTH - getTexture()->getSize().x / 2 * getScale().x;
+        if (pos.y < getTexture()->getSize().y / 2 * getScale().y) pos.y = getTexture()->getSize().y / 2 * getScale().y;
+        if (pos.y > WINDOW_HEIGHT - getTexture()->getSize().y / 2 * getScale().y) pos.y = WINDOW_HEIGHT - getTexture()->getSize().y / 2 * getScale().y;
         setPosition(pos);
     }
 };
@@ -68,10 +72,10 @@ public:
 sf::Vector2f getRandomEdgePosition() {
     int side = rand() % 4;
     switch (side) {
-    case 0: return sf::Vector2f(rand() % WINDOW_WIDTH, 0); // Top
-    case 1: return sf::Vector2f(rand() % WINDOW_WIDTH, WINDOW_HEIGHT); // Bottom
-    case 2: return sf::Vector2f(0, rand() % WINDOW_HEIGHT); // Left
-    case 3: return sf::Vector2f(WINDOW_WIDTH, rand() % WINDOW_HEIGHT); // Right
+    case 0: return sf::Vector2f(rand() % WINDOW_WIDTH, 0);
+    case 1: return sf::Vector2f(rand() % WINDOW_WIDTH, WINDOW_HEIGHT);
+    case 2: return sf::Vector2f(0, rand() % WINDOW_HEIGHT);
+    case 3: return sf::Vector2f(WINDOW_WIDTH, rand() % WINDOW_HEIGHT);
     }
     return sf::Vector2f(0, 0);
 }
@@ -93,7 +97,10 @@ int main() {
         return -1;
     }
     sf::Sprite backgroundSprite(backgroundTexture);
-    backgroundSprite.setScale(WINDOW_WIDTH / backgroundTexture.getSize().x, WINDOW_HEIGHT / backgroundTexture.getSize().y);
+    backgroundSprite.setScale(
+        static_cast<float>(WINDOW_WIDTH) / backgroundTexture.getSize().x,
+        static_cast<float>(WINDOW_HEIGHT) / backgroundTexture.getSize().y
+        );
 
     sf::Texture basketTexture;
     if (!basketTexture.loadFromFile("/Users/riya.mathur/grade_catcher/basket.png")) {
@@ -101,8 +108,7 @@ int main() {
         return -1;
     }
 
-    Basket basket(basketTexture, sf::Vector2f(WINDOW_WIDTH / 2, WINDOW_HEIGHT / 2)); // center the basket
-    basket.setSpeed(300, 300, 200);
+    Basket basket(basketTexture, sf::Vector2f(WINDOW_WIDTH / 2, WINDOW_HEIGHT / 2));
 
     vector<sf::Texture> gradeTextures(5);
     for (int i = 0; i < 5; ++i) {
@@ -136,38 +142,45 @@ int main() {
     scoreText.setFillColor(sf::Color::Black);
     scoreText.setPosition(10, 40);
 
+    sf::Text lowGradesText;
+    lowGradesText.setFont(font);
+    lowGradesText.setCharacterSize(24);
+    lowGradesText.setFillColor(sf::Color::Black);
+    lowGradesText.setPosition(10, 70);
+
     while (window.isOpen()) {
         sf::Time elapsed = clock.restart();
         timeSinceLastSpawn += elapsed.asSeconds();
 
         sf::Event event;
         while (window.pollEvent(event)) {
-            if (event.type == sf::Event::Closed)
+            if (event.type == sf::Event::Closed) {
                 window.close();
-        }
+            }
 
-        if (sf::Keyboard::isKeyPressed(sf::Keyboard::Up)) {
-            basket.velocityY = -300;
-        } else if (sf::Keyboard::isKeyPressed(sf::Keyboard::Down)) {
-            basket.velocityY = 300;
-        } else {
-            basket.velocityY = 0;
-        }
-
-        if (sf::Keyboard::isKeyPressed(sf::Keyboard::Left)) {
-            basket.velocityX = -300;
-        } else if (sf::Keyboard::isKeyPressed(sf::Keyboard::Right)) {
-            basket.velocityX = 300;
-        } else {
-            basket.velocityX = 0;
-        }
-
-        if (sf::Keyboard::isKeyPressed(sf::Keyboard::A)) {
-            basket.rotationSpeed = -200;
-        } else if (sf::Keyboard::isKeyPressed(sf::Keyboard::D)) {
-            basket.rotationSpeed = 200;
-        } else {
-            basket.rotationSpeed = 0;
+            if (event.type == sf::Event::KeyPressed) {
+                if (event.key.code == sf::Keyboard::Up) {
+                    basket.velocityY = -300.0f;
+                } else if (event.key.code == sf::Keyboard::Down) {
+                    basket.velocityY = 300.0f;
+                } else if (event.key.code == sf::Keyboard::Left) {
+                    basket.velocityX = -300.0f;
+                } else if (event.key.code == sf::Keyboard::Right) {
+                    basket.velocityX = 300.0f;
+                } else if (event.key.code == sf::Keyboard::A) {
+                    basket.rotationSpeed = -100.0f;
+                } else if (event.key.code == sf::Keyboard::D) {
+                    basket.rotationSpeed = 100.0f;
+                }
+            } else if (event.type == sf::Event::KeyReleased) {
+                if (event.key.code == sf::Keyboard::Up || event.key.code == sf::Keyboard::Down) {
+                    basket.velocityY = 0;
+                } else if (event.key.code == sf::Keyboard::Left || event.key.code == sf::Keyboard::Right) {
+                    basket.velocityX = 0;
+                } else if (event.key.code == sf::Keyboard::A || event.key.code == sf::Keyboard::D) {
+                    basket.rotationSpeed = 0;
+                }
+            }
         }
 
         basket.moveInDirection(elapsed);
@@ -185,7 +198,7 @@ int main() {
         }
 
         auto it = grades.begin();
-        while (it!= grades.end()) {
+        while (it != grades.end()) {
             if (it->getGlobalBounds().intersects(basket.getGlobalBounds())) {
                 score += it->value;
                 if (it->value < 3) {
@@ -209,13 +222,15 @@ int main() {
         int remainingTime = GAME_DURATION - gameClock.getElapsedTime().asSeconds();
         timerText.setString("Time: " + to_string(remainingTime));
         scoreText.setString("Score: " + to_string(score));
+        lowGradesText.setString("Low Grades Caught: " + to_string(lowGradesCaught));
         window.draw(timerText);
         window.draw(scoreText);
+        window.draw(lowGradesText);
 
         window.display();
 
         if (remainingTime <= 0 || lowGradesCaught >= 3) {
-            cout << (score >= WINNING_SCORE? "You Win!" : "Game Over!") << " Score: " << score << endl;
+            cout << (score >= WINNING_SCORE ? "You Win!" : "Game Over!") << " Score: " << score << endl;
             break;
         }
     }
