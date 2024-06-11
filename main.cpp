@@ -203,19 +203,21 @@ int main() {
         }
 
         auto it = grades.begin();
-        while (it != grades.end()) {
+        while (it!= grades.end()) {
             sf::FloatRect gradeBounds = it->getGlobalBounds();
             sf::FloatRect topBounds = basket.getTopBounds();
             sf::FloatRect basketBounds = basket.getGlobalBounds();
 
             bool intersectsTop = gradeBounds.intersects(topBounds);
-            bool intersectsOtherSides = gradeBounds.intersects(basketBounds) && !intersectsTop;
+            bool intersectsOtherSides = gradeBounds.intersects(basketBounds) &&!intersectsTop;
 
-            if (intersectsTop && !intersectsOtherSides) {
+            if (intersectsTop) {
                 score += it->value;
                 if (it->value < 3) {
                     lowGradesCaught++;
                 }
+                it = grades.erase(it);
+            } else if (intersectsOtherSides) {
                 it = grades.erase(it);
             } else if (it->getPosition().x < 0 || it->getPosition().x > WINDOW_WIDTH || it->getPosition().y < 0 || it->getPosition().y > WINDOW_HEIGHT) {
                 it = grades.erase(it);
