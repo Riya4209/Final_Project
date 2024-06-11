@@ -67,6 +67,11 @@ public:
         if (pos.y > WINDOW_HEIGHT - getTexture()->getSize().y / 2 * getScale().y) pos.y = WINDOW_HEIGHT - getTexture()->getSize().y / 2 * getScale().y;
         setPosition(pos);
     }
+
+    sf::FloatRect getTopBounds() const {
+        sf::FloatRect bounds = getGlobalBounds();
+        return sf::FloatRect(bounds.left, bounds.top, bounds.width, bounds.height / 2);
+    }
 };
 
 sf::Vector2f getRandomEdgePosition() {
@@ -199,7 +204,14 @@ int main() {
 
         auto it = grades.begin();
         while (it != grades.end()) {
-            if (it->getGlobalBounds().intersects(basket.getGlobalBounds())) {
+            sf::FloatRect gradeBounds = it->getGlobalBounds();
+            sf::FloatRect topBounds = basket.getTopBounds();
+            sf::FloatRect basketBounds = basket.getGlobalBounds();
+
+            bool intersectsTop = gradeBounds.intersects(topBounds);
+            bool intersectsOtherSides = gradeBounds.intersects(basketBounds) && !intersectsTop;
+
+            if (intersectsTop && !intersectsOtherSides) {
                 score += it->value;
                 if (it->value < 3) {
                     lowGradesCaught++;
